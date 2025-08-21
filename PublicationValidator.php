@@ -11,6 +11,66 @@ class PublicationValidator extends AbstractExternalModule {
         return $apiUrl;
     }
 
+    private static function isCheckerPage() {
+        $page = isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : "";
+        if (preg_match("/ExternalModules\/\?prefix=FlightTracker-Publication-Validator&page=pages%2Fpub_checker/", $_SERVER['REQUEST_URI'])) {
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    function redcap_module_api($action, $payload, $project_id, $user_id, $format, $returnFormat, $csvDelim) {
+        if ($returnFormat != "json") {
+            return $this->framework->apiErrorResponse("This API only supports JSON as return format!", 400);
+        }
+        switch ($action) {
+            case "get-citations-by-userid": return $this->getCitationsByUserID($payload);
+        }
+    }
+
+    // Accept a JSON payload specifying the user whose citations we want
+    function getCitationsByUserID($payload) {
+        ?>
+            <script>
+                console.log('hit citations by userid endpoint')
+            </script>
+        <?php
+        $userID = "".($payload["user_id"]);
+        if ($userID == "") return $this->framework->apiErrorResponse("Must specify 'item-name'!", 400);
+
+        $data = array(
+            'token' => '364C558CA953B469A00B45B795F8AFC0',
+            'content' => 'record',
+            'action' => 'export',
+            'format' => 'json',
+            'type' => 'flat',
+            'csvDelimiter' => '',
+            'forms' => array('identifiers','citation'),
+            'rawOrLabel' => 'raw',
+            'rawOrLabelHeaders' => 'raw',
+            'exportCheckboxLabel' => 'false',
+            'exportSurveyFields' => 'false',
+            'exportDataAccessGroups' => 'false',
+            'returnFormat' => 'json',
+            'filterLogic' => '[identifier_userid] == ' . $userID
+        );
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://redcap.ai.uky.edu/api/');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_VERBOSE, 0);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($ch, CURLOPT_FRESH_CONNECT, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
+        $output = curl_exec($ch);
+        print $output;
+        curl_close($ch);
+        return $data;
+    }
+
     // Hook to modify survey display
     function redcap_survey_page_top($project_id, $record, $instrument, $event_id, $group_id, $repeat_instance) {
         if ($instrument === 'pub_validator') {

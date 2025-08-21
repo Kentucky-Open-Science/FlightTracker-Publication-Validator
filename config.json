@@ -10,6 +10,16 @@
             "institution": "University of Kentucky - CAAI"
         }
     ],
+    "links": {
+        "project": [
+            {
+                "name": "User Pub Checker",
+                "icon": "fas fa-message",
+                "url": "pages/pub_checker.php",
+                "show-header-and-footer": true
+            }
+        ]
+    },
     "project-settings": [
         {
             "key": "validation_form",
@@ -33,5 +43,15 @@
                 }
             ]
         }
-    ]
+    ],
+    "no-auth-pages": [
+        "pub_checker"
+    ],
+    "include-authors-in-api-info": true,
+    "api-actions": {
+        "get-citations-by-userid": {
+            "description": "Select all citations belonging to a certain user by matching their UserID.",
+            "access": ["auth"]
+        }
+    }
 }
