@@ -4,6 +4,9 @@ namespace CAAIModules\PublicationValidator;
 use ExternalModules\AbstractExternalModule;
 use REDCap;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+
 class PublicationValidator extends AbstractExternalModule {
     function getRedcapApiUrl() {
         // Construct the API URL dynamically
@@ -19,56 +22,67 @@ class PublicationValidator extends AbstractExternalModule {
         return FALSE;
     }
 
-    function redcap_module_api($action, $payload, $project_id, $user_id, $format, $returnFormat, $csvDelim) {
+    function redcap_module_api($action, $payload, $project_id, $user_id, $format, $returnFormat, $csvDelim, $token) {
         if ($returnFormat != "json") {
             return $this->framework->apiErrorResponse("This API only supports JSON as return format!", 400);
         }
         switch ($action) {
-            case "get-citations-by-userid": return $this->getCitationsByUserID($payload);
+            case "get-citations-by-userid": return $this->getCitationsByUserID($payload, $token);
         }
     }
 
-    // Accept a JSON payload specifying the user whose citations we want
-    function getCitationsByUserID($payload) {
+    // Rewritten with Guzzle for a cleaner look
+    function getCitationsByUserID($payload, $token) {
         ?>
-            <script>
-                console.log('hit citations by userid endpoint')
-            </script>
+        <script>
+            console.log('hit citations by userid endpoint')
+        </script>
         <?php
-        $userID = "".($payload["user_id"]);
-        if ($userID == "") return $this->framework->apiErrorResponse("Must specify 'item-name'!", 400);
 
-        $data = array(
-            'token' => '364C558CA953B469A00B45B795F8AFC0',
+        $userID = $payload['user_id'] ?? '';
+        if ($userID === '') {
+            return $this->framework->apiErrorResponse("Must specify 'user_id'!", 400);
+        }
+
+        $data = [
+            'token' => $token,
             'content' => 'record',
             'action' => 'export',
             'format' => 'json',
             'type' => 'flat',
             'csvDelimiter' => '',
-            'forms' => array('identifiers','citation'),
+            'forms' => ['identifiers', 'citation'],
             'rawOrLabel' => 'raw',
             'rawOrLabelHeaders' => 'raw',
             'exportCheckboxLabel' => 'false',
             'exportSurveyFields' => 'false',
             'exportDataAccessGroups' => 'false',
             'returnFormat' => 'json',
-            'filterLogic' => '[identifier_userid] == ' . $userID
-        );
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://redcap.ai.uky.edu/api/');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_VERBOSE, 0);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_AUTOREFERER, true);
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
-        curl_setopt($ch, CURLOPT_FRESH_CONNECT, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
-        $output = curl_exec($ch);
-        print $output;
-        curl_close($ch);
-        return $data;
+            'filterLogic' => "[identifier_userid] == {$userID}"
+        ];
+
+        $client = new Client([
+            'base_uri' => 'https://redcap.ai.uky.edu',
+            'verify' => false, // Consider enabling SSL verification in production
+            'timeout' => 30,
+        ]);
+
+        try {
+            $response = $client->post('/api/', [
+                'form_params' => $data
+            ]);
+
+            $output = $response->getBody()->getContents();
+            print $output;
+
+            return json_decode($output, true); // Return parsed response
+        } catch (RequestException $e) {
+            return [
+                'error' => true,
+                'message' => $e->getMessage(),
+                'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
+            ];
+        }
     }
 
     // Hook to modify survey display
@@ -168,7 +182,10 @@ class PublicationValidator extends AbstractExternalModule {
         $selected_instrument = $this->getProjectSetting('validation_form');
         $apis = $this->getProjectSetting('cohort-api-key');
         $apis = $apis[0]; // it returns a nested array with one element, this gets the element which has the keys
-        $api_url = $this->getRedcapApiUrl();
+        $api_url = $this->getProjectSetting('api_url') !== ''
+            ? $this->getProjectSetting('api_url')
+            : $this->getRedcapApiUrl();
+
 
         if ($instrument === $selected_instrument) {
             // get the script from url since surveys page doesn't have direct access to modules
@@ -178,6 +195,7 @@ class PublicationValidator extends AbstractExternalModule {
                     const api_keys = <?= json_encode($apis) ?>;
                     console.log(api_keys)
                     const api_url = <?= json_encode($api_url) ?>;
+                    console.log(api_url);
                     console.log(<?= json_encode($selected_instrument) ?>)
                 </script>
                 <script src="<?= $script_url ?>"></script>

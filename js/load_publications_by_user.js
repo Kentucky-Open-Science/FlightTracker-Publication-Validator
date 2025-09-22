@@ -23,7 +23,7 @@ function insertChoice(element_id, textarea_id) {
     }
 
     selections[textarea_id] = selected;
-    console.log(selections[textarea_id]);
+    //console.log(selections[textarea_id]);
 }
 
 function setValues() {
@@ -40,9 +40,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     console.log('Linkblue:', linkblue); // Debug: ensure linkblue is captured correctly'
 
     let textAreas = document.getElementsByTagName('textarea');
-    console.log(textAreas)
     for(let i=0; i<textAreas.length; i++) {
-        console.log(textAreas[i]);
         if (textAreas[i].name.includes('supported_pubs')) {
             textAreas[i].classList.add("@HIDDEN");
         }
@@ -57,19 +55,22 @@ document.addEventListener('DOMContentLoaded', async function () {
             format: 'json',
             type: 'flat',
             csvDelimiter: '',
-            'fields[0]': 'record_id',
-            'fields[1]': 'identifier_first_name',
-            'fields[2]': 'identifier_middle',
-            'fields[3]': 'identifier_last_name',
-            'fields[4]': 'identifier_userid',
-            'fields[5]': 'citation_full_citation',
-            'fields[6]': 'citation_date',
+            fields: [
+                'record_id',
+                'identifier_first_name',
+                'identifier_middle',
+                'identifier_last_name',
+                'identifier_userid',
+                'citation_full_citation',
+                'citation_date'
+            ],
             rawOrLabel: 'raw',
             rawOrLabelHeaders: 'raw',
             exportCheckboxLabel: 'false',
             exportSurveyFields: 'false',
             exportDataAccessGroups: 'false',
             returnFormat: 'json-array',
+            filterLogic: `identifier_userid='${linkblue}'`
         };
 
         return new Promise((resolve, reject) => {
@@ -82,6 +83,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     try {
         // Fetch data from all API keys
         const allResponses = await Promise.all(api_keys.map(fetchRecords));
+
+        console.log(allResponses)
 
         // Process the fetched data
         const all_records = {};
@@ -123,8 +126,12 @@ document.addEventListener('DOMContentLoaded', async function () {
         // Build `user_citations` for the current user
         const user_citations = {};
         Object.values(all_records).forEach(record => {
+            // Each repository is ALL pubs that came before the earmarked year. We don't need duplicate records,
+            // so we're checking that they match the user, and then that they aren't already in the set for printout.
             if (record.user_id === linkblue) {
-                Object.assign(user_citations, record.citations); // Merge user citations
+                if (!Object.values(record).includes(citation)) {
+                    Object.assign(user_citations, record.citations); // Merge user citations
+                }
             }
         });
 

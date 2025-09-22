@@ -28,6 +28,12 @@
             "type": "text"
         },
         {
+            "key": "api_url",
+            "name": "If using an external API, input it here. Otherwise, leave it blank.",
+            "required": true,
+            "type": "text"
+        },
+        {
             "key": "api-key-desc",
             "name": "Please provide the API key(s) for cohorts of publications from Flight Tracker.",
             "required": true,
