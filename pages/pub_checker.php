@@ -6,15 +6,11 @@ $page = 'home';
 $selected_instrument = $module->getProjectSetting('validation_form');
 $apis = $module->getProjectSetting('cohort-api-key');
 $apis = $apis[0]; // it returns a nested array with one element, this gets the element which has the keys
-$api_url = $module->getProjectSetting('api_url') !== ''
-    ? $module->getProjectSetting('api_url')
-    : $module->getRedcapApiUrl();
+$api_url = $module->getRedcapApiUrl();
 ?>
 <script>
     const api_keys = <?= json_encode($apis) ?>;
-    console.log(api_keys)
     const api_url = <?= json_encode($api_url) ?>;
-    console.log(api_url);
     console.log(<?= json_encode($selected_instrument) ?>)
 
     const ExternalModules = window.ExternalModules || {};
@@ -37,7 +33,7 @@ $api_url = $module->getProjectSetting('api_url') !== ''
     document.getElementById('mabutton').addEventListener('click', async function () {
         const linkblue = document.getElementById('linkblueInput').value;
 
-        console.log('Linkblue:', linkblue); // Debug: ensure linkblue is captured correctly'
+        console.log('Linkblue:', linkblue);
 
         let textAreas = document.getElementsByTagName('textarea');
         for(let i=0; i<textAreas.length; i++) {
@@ -46,9 +42,25 @@ $api_url = $module->getProjectSetting('api_url') !== ''
             }
         }
 
-        // Function to fetch records for a single API key
-        const fetchRecords = (key) => {
-            const records_data = {
+        // Flat return doesn't work with this data, so lets reconstruct it that way
+        const flatten = (rows) => {
+            const flattened = [];
+
+            rows.forEach(({ record, redcap_repeat_instrument, redcap_repeat_instance, field_name, value }) => {
+                if (redcap_repeat_instrument !== 'citation') {
+                    reject(new Error('Data doesn\'t match requested forms.'));
+
+                    //if (redcap_repeat_instance)
+                }
+            });
+
+            return Object.values(grouped);
+        };
+        
+        // Separate request to get the user data for the currently requested user
+        const fetchIdents = (key) => {
+            console.log(key)
+            const idents_data = {
                 token: key,
                 content: 'record',
                 action: 'export',
@@ -57,25 +69,58 @@ $api_url = $module->getProjectSetting('api_url') !== ''
                 csvDelimiter: '',
                 fields: [
                     'record_id',
-                    'identifier_first_name',
-                    'identifier_middle',
-                    'identifier_last_name',
                     'identifier_userid',
-                    'citation_full_citation',
-                    'citation_date'
+                    'identifier_first_name',
+                    'identifier_last_name',
                 ],
-                rawOrLabel: 'raw',
+                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
                 rawOrLabelHeaders: 'raw',
                 exportCheckboxLabel: 'false',
                 exportSurveyFields: 'false',
                 exportDataAccessGroups: 'false',
-                returnFormat: 'json-array',
-                filterLogic: `identifier_userid='${linkblue}'`
+                returnFormat: 'json',
+                filterLogic: `[identifier_userid]='${linkblue}'`
+            };
+
+            return new Promise((resolve, reject) => {
+                $.post(api_url, idents_data)
+                    .done(response => {
+                        resolve(response);
+                    })
+                    .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
+            });
+        };
+
+        // Function to fetch records for a single API key
+        const fetchRecords = (key) => {
+            console.log(key)
+            const records_data = {
+                token: key,
+                content: 'record',
+                action: 'export',
+                format: 'json',
+                type: 'eav',
+                csvDelimiter: '',
+                fields: [
+                    'citation_pmid',
+                    'citation_full_citation',
+                    'citation_date'
+                ],
+                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
+                rawOrLabelHeaders: 'raw',
+                exportCheckboxLabel: 'false',
+                exportSurveyFields: 'false',
+                exportDataAccessGroups: 'false',
+                returnFormat: 'json',
+                filterLogic: `[identifier_userid]='${linkblue}'`
             };
 
             return new Promise((resolve, reject) => {
                 $.post(api_url, records_data)
-                    .done(response => resolve(response))
+                    .done(response => {
+                        const flattened = flatten(response);
+                        resolve(flattened);
+                    })
                     .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
             });
         };
@@ -83,12 +128,15 @@ $api_url = $module->getProjectSetting('api_url') !== ''
         try {
             // Fetch data from all API keys
             const allResponses = await Promise.all(api_keys.map(fetchRecords));
-
+            
+            console.log('All Responses:');
             console.log(allResponses)
 
             // Process the fetched data
             const all_records = {};
+            console.log('Response:');
             allResponses.forEach(response => {
+                console.log(response);
                 response.forEach(object => {
                     const {
                         record_id,
@@ -98,7 +146,8 @@ $api_url = $module->getProjectSetting('api_url') !== ''
                         citation_full_citation: citation,
                         citation_date
                     } = object;
-
+                    
+                    console.log(citation_date);
                     const citationYear = citation_date.split("-")[0];
                     const key = record_id;
 
