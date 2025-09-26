@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    /// Flat return doesn't work with this data, so lets reconstruct it that way
+    // Flat return doesn't work with this data, so lets reconstruct it that way
         const flatten = (rows) => {
             const flattened = [];
 
@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             return new Promise((resolve, reject) => {
                 $.post(api_url, records_data)
                     .done(response => {
+                        console.log(response)
                         const flattened = flatten(response); // spit out data reconstituted into a "flat" style
                         resolve(flattened);
                     })

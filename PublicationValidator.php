@@ -88,10 +88,12 @@ class PublicationValidator extends AbstractExternalModule {
     // Hook to modify survey display
     function redcap_survey_page_top($project_id, $record, $instrument, $event_id, $group_id, $repeat_instance) {
         if ($instrument === 'pub_validator') {
+
             ?>
             <script>
             // Modify survey submit to capture custom mapping data
             $(document).ready(function() {
+                //console.log(<?= json_encode($linkblue_request)?>)
                 // Intercept survey submit
                 $('form[name="form"]').on('submit', function(e) {
                     // Collect all publication mappings
