@@ -30,6 +30,8 @@ $api_url = $module->getRedcapApiUrl();
 </table>
 
 <script>
+    let got_idents = false; // used later, we only need idents 1 time
+
     document.getElementById('mabutton').addEventListener('click', async function () {
         const linkblue = document.getElementById('linkblueInput').value;
 
@@ -47,19 +49,28 @@ $api_url = $module->getRedcapApiUrl();
             const flattened = [];
 
             rows.forEach(({ record, redcap_repeat_instrument, redcap_repeat_instance, field_name, value }) => {
-                if (redcap_repeat_instrument !== 'citation') {
-                    reject(new Error('Data doesn\'t match requested forms.'));
-
-                    //if (redcap_repeat_instance)
+                let exists = flattened.some(obj => obj['redcap_repeat_instance'] === redcap_repeat_instance); // we're checking to see if this value is in list already
+                if (exists) {
+                    /* The repeat instance already exists, so we just add the new field to that record */
+                    let match = flattened.find(obj => obj['redcap_repeat_instance'] === redcap_repeat_instance);
+                    match[field_name] = value;
+                }
+                else { 
+                    /* Add a whole new record to the list based on repeat instance */
+                    flattened.push({
+                        'record': record,
+                        'redcap_repeat_instrument': redcap_repeat_instrument,
+                        'redcap_repeat_instance': redcap_repeat_instance,
+                        [field_name]: value
+                    });
                 }
             });
 
-            return Object.values(grouped);
+            return Object.values(flattened);
         };
         
         // Separate request to get the user data for the currently requested user
         const fetchIdents = (key) => {
-            console.log(key)
             const idents_data = {
                 token: key,
                 content: 'record',
@@ -92,8 +103,12 @@ $api_url = $module->getRedcapApiUrl();
         };
 
         // Function to fetch records for a single API key
-        const fetchRecords = (key) => {
-            console.log(key)
+        const fetchRecords =  async (key) => {
+            if (!got_idents) {
+                const idents = await fetchIdents(key);
+                got_idents = true;
+            }
+
             const records_data = {
                 token: key,
                 content: 'record',
@@ -118,7 +133,7 @@ $api_url = $module->getRedcapApiUrl();
             return new Promise((resolve, reject) => {
                 $.post(api_url, records_data)
                     .done(response => {
-                        const flattened = flatten(response);
+                        const flattened = flatten(response); // spit out data reconstituted into a "flat" style
                         resolve(flattened);
                     })
                     .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
@@ -128,13 +143,9 @@ $api_url = $module->getRedcapApiUrl();
         try {
             // Fetch data from all API keys
             const allResponses = await Promise.all(api_keys.map(fetchRecords));
-            
-            console.log('All Responses:');
-            console.log(allResponses)
 
             // Process the fetched data
             const all_records = {};
-            console.log('Response:');
             allResponses.forEach(response => {
                 console.log(response);
                 response.forEach(object => {
@@ -147,7 +158,6 @@ $api_url = $module->getRedcapApiUrl();
                         citation_date
                     } = object;
                     
-                    console.log(citation_date);
                     const citationYear = citation_date.split("-")[0];
                     const key = record_id;
 
