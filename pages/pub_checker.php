@@ -144,57 +144,29 @@ $api_url = $module->getRedcapApiUrl();
             // Fetch data from all API keys
             const allResponses = await Promise.all(api_keys.map(fetchRecords));
 
-            // Process the fetched data
-            const all_records = {};
-            allResponses.forEach(response => {
-                console.log(response);
-                response.forEach(object => {
-                    const {
-                        record_id,
-                        identifier_userid: user_id,
-                        identifier_first_name: first_name,
-                        identifier_last_name: last_name,
-                        citation_full_citation: citation,
-                        citation_date
-                    } = object;
-                    
-                    const citationYear = citation_date.split("-")[0];
-                    const key = record_id;
+            console.log('All Responses:', allResponses); // Debug: ensure data is fetched correctly
 
-                    if (!all_records[key]) {
-                        all_records[key] = {
-                            record_id,
-                            user_id,
-                            first_name,
-                            last_name,
-                            citations: {}
-                        };
-                    }
+            // Process the fetched data
+            const grouped_by_year = {};
+            allResponses.forEach(response => {
+                response.forEach(object => {
+                    const date = new Date(object.citation_date);
+                    const citationYear = date.getFullYear().toString();
 
                     if (citationYear !== '') {
-                        if (!all_records[key].citations[citationYear]) {
-                            all_records[key].citations[citationYear] = [];
+                        console.log('Citation Year:', citationYear); // Debug: check citation year extraction
+                        if (grouped_by_year[citationYear]) {
+                            grouped_by_year[citationYear].push(object);
                         }
-                        if (citation) {
-                            all_records[key].citations[citationYear].push(citation);
+                        else {
+                            grouped_by_year[citationYear] = []
+                            grouped_by_year[citationYear].push(object);
                         }
                     }
                 });
             });
 
-            // Build `user_citations` for the current user
-            const user_citations = {};
-            Object.values(all_records).forEach(record => {
-                // Each repository is ALL pubs that came before the earmarked year. We don't need duplicate records,
-                // so we're checking that they match the user, and then that they aren't already in the set for printout.
-                if (record.user_id === linkblue) {
-                    if (!Object.values(record).includes(citation)) {
-                        Object.assign(user_citations, record.citations); // Merge user citations
-                    }
-                }
-            });
-
-            console.log('User Citations:', user_citations); // Debug: ensure citations are filtered correctly
+            console.log('User Citations:', grouped_by_year); // Debug: ensure citations are filtered correctly
 
             // Update the survey rows with user citations
             document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {

@@ -33,6 +33,8 @@ function setValues() {
     }
 }
 
+let got_idents = false;
+
 document.addEventListener('DOMContentLoaded', async function () {
     const linkblue_div = document.querySelector('div[data-mlm-type="label"]');
     const linkblue = linkblue_div ? linkblue_div.textContent.trim() : null;
@@ -46,150 +48,183 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Function to fetch records for a single API key
-    const fetchRecords = (key) => {
-        const records_data = {
-            token: key,
-            content: 'record',
-            action: 'export',
-            format: 'json',
-            type: 'flat',
-            csvDelimiter: '',
-            fields: [
-                'record_id',
-                'identifier_first_name',
-                'identifier_middle',
-                'identifier_last_name',
-                'identifier_userid',
-                'citation_full_citation',
-                'citation_date'
-            ],
-            rawOrLabel: 'raw',
-            rawOrLabelHeaders: 'raw',
-            exportCheckboxLabel: 'false',
-            exportSurveyFields: 'false',
-            exportDataAccessGroups: 'false',
-            returnFormat: 'json-array',
-            filterLogic: `identifier_userid='${linkblue}'`
-        };
+    /// Flat return doesn't work with this data, so lets reconstruct it that way
+        const flatten = (rows) => {
+            const flattened = [];
 
-        return new Promise((resolve, reject) => {
-            $.post(api_url, records_data)
-                .done(response => resolve(response))
-                .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
-        });
-    };
-
-    try {
-        // Fetch data from all API keys
-        const allResponses = await Promise.all(api_keys.map(fetchRecords));
-
-        console.log(allResponses)
-
-        // Process the fetched data
-        const all_records = {};
-        allResponses.forEach(response => {
-            response.forEach(object => {
-                const {
-                    record_id,
-                    identifier_userid: user_id,
-                    identifier_first_name: first_name,
-                    identifier_last_name: last_name,
-                    citation_full_citation: citation,
-                    citation_date
-                } = object;
-
-                const citationYear = citation_date.split("-")[0];
-                const key = record_id;
-
-                if (!all_records[key]) {
-                    all_records[key] = {
-                        record_id,
-                        user_id,
-                        first_name,
-                        last_name,
-                        citations: {}
-                    };
+            rows.forEach(({ record, redcap_repeat_instrument, redcap_repeat_instance, field_name, value }) => {
+                let exists = flattened.some(obj => obj['redcap_repeat_instance'] === redcap_repeat_instance); // we're checking to see if this value is in list already
+                if (exists) {
+                    /* The repeat instance already exists, so we just add the new field to that record */
+                    let match = flattened.find(obj => obj['redcap_repeat_instance'] === redcap_repeat_instance);
+                    match[field_name] = value;
                 }
-
-                if (citationYear !== '') {
-                    if (!all_records[key].citations[citationYear]) {
-                        all_records[key].citations[citationYear] = [];
-                    }
-                    if (citation) {
-                        all_records[key].citations[citationYear].push(citation);
-                    }
+                else { 
+                    /* Add a whole new record to the list based on repeat instance */
+                    flattened.push({
+                        'record': record,
+                        'redcap_repeat_instrument': redcap_repeat_instrument,
+                        'redcap_repeat_instance': redcap_repeat_instance,
+                        [field_name]: value
+                    });
                 }
             });
-        });
 
-        // Build `user_citations` for the current user
-        const user_citations = {};
-        Object.values(all_records).forEach(record => {
-            // Each repository is ALL pubs that came before the earmarked year. We don't need duplicate records,
-            // so we're checking that they match the user, and then that they aren't already in the set for printout.
-            if (record.user_id === linkblue) {
-                if (!Object.values(record).includes(citation)) {
-                    Object.assign(user_citations, record.citations); // Merge user citations
-                }
+            return Object.values(flattened);
+        };
+        
+        // Separate request to get the user data for the currently requested user
+        const fetchIdents = (key) => {
+            const idents_data = {
+                token: key,
+                content: 'record',
+                action: 'export',
+                format: 'json',
+                type: 'flat',
+                csvDelimiter: '',
+                fields: [
+                    'record_id',
+                    'identifier_userid',
+                    'identifier_first_name',
+                    'identifier_last_name',
+                ],
+                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
+                rawOrLabelHeaders: 'raw',
+                exportCheckboxLabel: 'false',
+                exportSurveyFields: 'false',
+                exportDataAccessGroups: 'false',
+                returnFormat: 'json',
+                filterLogic: `[identifier_userid]='${linkblue}'`
+            };
+
+            return new Promise((resolve, reject) => {
+                $.post(api_url, idents_data)
+                    .done(response => {
+                        resolve(response);
+                    })
+                    .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
+            });
+        };
+
+        // Function to fetch records for a single API key
+        const fetchRecords =  async (key) => {
+            if (!got_idents) {
+                const idents = await fetchIdents(key);
+                got_idents = true;
             }
-        });
 
-        console.log('User Citations:', user_citations); // Debug: ensure citations are filtered correctly
+            const records_data = {
+                token: key,
+                content: 'record',
+                action: 'export',
+                format: 'json',
+                type: 'eav',
+                csvDelimiter: '',
+                fields: [
+                    'citation_pmid',
+                    'citation_full_citation',
+                    'citation_date'
+                ],
+                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
+                rawOrLabelHeaders: 'raw',
+                exportCheckboxLabel: 'false',
+                exportSurveyFields: 'false',
+                exportDataAccessGroups: 'false',
+                returnFormat: 'json',
+                filterLogic: `[identifier_userid]='${linkblue}'`
+            };
 
-        // Update the survey rows with user citations
-        document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {
-            let row_id = row.id;
-            row_id = row_id.split('-')[0];
-            const textarea = document.getElementById(row_id);
-            //textarea.classList.add('@HIDDEN');
-            //console.log(row_id);
-            let row_year = row_id.split('_').pop();
+            return new Promise((resolve, reject) => {
+                $.post(api_url, records_data)
+                    .done(response => {
+                        const flattened = flatten(response); // spit out data reconstituted into a "flat" style
+                        resolve(flattened);
+                    })
+                    .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
+            });
+        };
 
-            selections[row_id] = []; // we want each row_id as a key in the object
-            console.log(selections);
+        try {
+            // Fetch data from all API keys
+            const allResponses = await Promise.all(api_keys.map(fetchRecords));
 
-            const dataCell = row.querySelector('td.data.col-5');
-            if (dataCell) {
-                // Loop through available citations for the user
-                Object.entries(user_citations).forEach(([year, citations]) => {
-                    if (year >= row_year) {
-                        citations.forEach(citation => {
-                            const customElement = document.createElement('div');
-                            // Update below to get an ID from somewhere that shows you the correct table.
-                            console.log(row_id);
-                            customElement.innerHTML = `
+            console.log('All Responses:', allResponses); // Debug: ensure data is fetched correctly
+
+            // Process the fetched data
+            const grouped_by_year = {};
+            allResponses.forEach(response => {
+                response.forEach(object => {
+                    const date = new Date(object.citation_date);
+                    const citationYear = date.getFullYear().toString();
+
+                    if (citationYear !== '') {
+                        console.log('Citation Year:', citationYear); // Debug: check citation year extraction
+                        if (grouped_by_year[citationYear]) {
+                            grouped_by_year[citationYear].push(object);
+                        }
+                        else {
+                            grouped_by_year[citationYear] = []
+                            grouped_by_year[citationYear].push(object);
+                        }
+                    }
+                });
+            });
+
+            console.log('User Citations:', grouped_by_year); // Debug: ensure citations are filtered correctly
+
+            // Update the survey rows with user citations
+            document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {
+                let row_id = row.id;
+                row_id = row_id.split('-')[0];
+                const textarea = document.getElementById(row_id);
+                //textarea.classList.add('@HIDDEN');
+                //console.log(row_id);
+                let row_year = row_id.split('_').pop();
+
+                selections[row_id] = []; // we want each row_id as a key in the object
+                console.log(selections);
+
+                const dataCell = row.querySelector('td.data.col-5');
+                if (dataCell) {
+                    // Loop through available citations for the user
+                    Object.entries(user_citations).forEach(([year, citations]) => {
+                        if (year >= row_year) {
+                            citations.forEach(citation => {
+                                const customElement = document.createElement('div');
+                                // Update below to get an ID from somewhere that shows you the correct table.
+                                console.log(row_id);
+                                customElement.innerHTML = `
                                 <input id="${citation}" type="checkbox" onclick="insertChoice(this.id, '${row_id}')">
                                 <label class="mc" for="${citation}">${citation} (${year})</label>
                             `;
-                            dataCell.appendChild(customElement);
-                        });
-                    }
-                });
-            }
+                                dataCell.appendChild(customElement);
+                            });
+                        }
+                    });
+                }
 
-            const submit_row = document.querySelector('tr[class="surveysubmit"]');
-            const testButton = document.createElement('div');
-            //testButton.innerHTML = `<input  type="button" id="test_button" onclick="setValues()">Test</input>`
-            dataCell.appendChild(testButton);
-        });
+                const submit_row = document.querySelector('tr[class="surveysubmit"]');
+                const testButton = document.createElement('div');
+                //testButton.innerHTML = `<input  type="button" id="test_button" onclick="setValues()">Test</input>`
+                dataCell.appendChild(testButton);
+            });
 
 
 
-        // Select the button using its attributes (e.g., `name` or `class`)
-        const submitButton = document.querySelector('button[name="submit-btn-saverecord"]');
+            // Select the button using its attributes (e.g., `name` or `class`)
+            const submitButton = document.querySelector('button[name="submit-btn-saverecord"]');
 
-        if (submitButton) {
-            // Add extra functionality without overwriting the existing `onclick`
-            const existingOnclick = submitButton.getAttribute('onclick');
-            const newOnclick = `
+            if (submitButton) {
+                // Add extra functionality without overwriting the existing `onclick`
+                const existingOnclick = submitButton.getAttribute('onclick');
+                const newOnclick = `
             setValues();
         ` + existingOnclick;
-            //submitButton.onclick = 'setValues();$(this).button("disable");dataEntrySubmit(this);return false;';
-            submitButton.setAttribute('onclick', newOnclick);
-        }
+                //submitButton.onclick = 'setValues();$(this).button("disable");dataEntrySubmit(this);return false;';
+                submitButton.setAttribute('onclick', newOnclick);
+            }
 
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
 });
