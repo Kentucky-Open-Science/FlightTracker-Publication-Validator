@@ -42,7 +42,94 @@ document.addEventListener('DOMContentLoaded', async function () {
     const linkblue_div = document.querySelector('div[data-mlm-type="label"]');
     const linkblue = linkblue_div ? linkblue_div.textContent.trim() : null;
 
-    console.log('Linkblue:', linkblue); // Debug: ensure linkblue is captured correctly'
+    // Add loading overlay
+    const loadingOverlay = document.createElement("div");
+    loadingOverlay.id = "loading-overlay";
+    loadingOverlay.innerHTML = `
+        <div style="
+            position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(255,255,255,0.8); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 1.2em; 
+            z-index: 9999;">
+            <div class="spinner" style="
+                border: 6px solid #f3f3f3; 
+                border-top: 6px solid #3498db; 
+                border-radius: 50%; 
+                width: 40px; 
+                height: 40px; 
+                animation: spin 1s linear infinite;">
+            </div>
+            <span style="margin-left: 10px;">Loading citations...</span>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    // Inject spinner animation
+    const spinnerStyle = document.createElement("style");
+    spinnerStyle.textContent = `
+    @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+    }`;
+    document.head.appendChild(spinnerStyle);
+
+    (function addTooltipStyles() {
+        if (document.getElementById("custom-tooltip-style")) return;
+
+        const style = document.createElement("style");
+        style.id = "custom-tooltip-style";
+        style.textContent = `
+            .tooltip-wrapper {
+                position: relative;
+                display: inline-block;
+                margin-left: 6px;
+            }
+
+            .tooltip-icon {
+                display: inline-block;
+                color: #007bff;
+                font-weight: bold;
+                cursor: help;
+                border: 1px solid #007bff;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                line-height: 14px;
+                text-align: center;
+                font-size: 12px;
+                background: #f8f9fa;
+            }
+
+            .tooltip-text {
+                visibility: hidden;
+                opacity: 0;
+                transition: opacity 0.2s;
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 0, 0, 0.85);
+                color: #fff;
+                padding: 6px 10px;
+                border-radius: 6px;
+                font-size: 0.85em;
+                min-width: 200px;
+                max-width: 400px;
+                white-space: normal;
+                z-index: 1000;
+            }
+
+            .tooltip-wrapper:hover .tooltip-text {
+                visibility: visible;
+                opacity: 1;
+            }
+        `;
+        document.head.appendChild(style);
+    })();
 
     let textAreas = document.getElementsByTagName('textarea');
     for(let i=0; i<textAreas.length; i++) {
@@ -163,10 +250,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 // Create a version of the citation text safe for the HTML attribute
                                 const hoverText = fullCitation.replace(/"/g, '&quot;');
                                 customElement.innerHTML = `
-                                    <input id="${pmid}" type="checkbox" onclick="insertChoice(this.id, '${row_id_base}')" style="margin-right: 5px;">
-                                    <label class="mc" for="${pmid}" title="${hoverText}">
+                                    <input id="${pmid}" 
+                                        type="checkbox" 
+                                        onclick="insertChoice(this.id, '${row_id_base}')" 
+                                        style="margin-right: 5px;">
+                                    <label class="mc" for="${pmid}">
                                         PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank">${pmid}</a> (${year})
-                                    </label>                                `;
+                                    </label>
+                                    <span class="tooltip-wrapper">
+                                        <span class="tooltip-icon">?</span>
+                                        <span class="tooltip-text">${hoverText}</span>
+                                    </span>
+                                `;
                                 dataCell.appendChild(customElement);
                             });
                         }
@@ -174,42 +269,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             });
 
-            // Inject CSS once
-            (function addTooltipStyles() {
-                if (document.getElementById("custom-tooltip-style")) return; // don’t add twice
-
-                const style = document.createElement("style");
-                style.id = "custom-tooltip-style";
-                style.textContent = `
-                    .tooltip {
-                    position: relative;
-                    cursor: help;
-                    }
-
-                    .tooltip::after {
-                    content: attr(data-tooltip);
-                    position: absolute;
-                    bottom: 125%; /* show above */
-                    left: 50%;
-                    transform: translateX(-50%);
-                    white-space: normal; /* wrap long text */
-                    background: rgba(0, 0, 0, 0.85);
-                    color: #fff;
-                    padding: 6px 10px;
-                    border-radius: 6px;
-                    font-size: 0.85em;
-                    min-width: 200px;
-                    max-width: 400px;
-                    display: none;
-                    z-index: 1000;
-                    }
-
-                    .tooltip:hover::after {
-                    display: block;
-                    }
-                `;
-                document.head.appendChild(style);
-            })();
 
             // Select the button using its attributes (e.g., `name` or `class`)
             const submitButton = document.querySelector('button[name="submit-btn-saverecord"]');
@@ -223,6 +282,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                 //submitButton.onclick = 'setValues();$(this).button("disable");dataEntrySubmit(this);return false;';
                 submitButton.setAttribute('onclick', newOnclick);
             }
+
+            // Remove loading overlay
+            const overlay = document.getElementById("loading-overlay");
+            if (overlay) overlay.remove();
 
         } catch (error) {
             console.error('Error fetching data:', error);
