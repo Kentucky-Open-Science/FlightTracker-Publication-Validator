@@ -184,10 +184,10 @@ class PublicationValidator extends AbstractExternalModule {
         $selected_instrument = $this->getProjectSetting('validation_form');
         $apis = $this->getProjectSetting('cohort-api-key');
         $apis = $apis[0]; // it returns a nested array with one element, this gets the element which has the keys
-        $api_url = $this->getProjectSetting('api_url') !== ''
-            ? $this->getProjectSetting('api_url')
-            : $this->getRedcapApiUrl();
-
+        // $api_url = $this->getProjectSetting('api_url') !== ''
+        //     ? $this->getProjectSetting('api_url')
+        //     : $this->getRedcapApiUrl();
+        $api_url = $this->getRedcapApiUrl();
 
         if ($instrument === $selected_instrument) {
             // get the script from url since surveys page doesn't have direct access to modules
@@ -199,6 +199,9 @@ class PublicationValidator extends AbstractExternalModule {
                     const api_url = <?= json_encode($api_url) ?>;
                     console.log(api_url);
                     console.log(<?= json_encode($selected_instrument) ?>)
+                    window.api_keys = <?= json_encode($apis) ?>;
+                    window.api_url = <?= json_encode($api_url ?? '') ?>;
+                    window.selected_instrument = <?= json_encode($selected_instrument) ?>;
                 </script>
                 <script src="<?= $script_url ?>"></script>
             <?php

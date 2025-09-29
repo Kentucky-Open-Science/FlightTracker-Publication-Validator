@@ -1,7 +1,12 @@
+const ExternalModules = window.ExternalModules || {};
+ExternalModules.CSRF_TOKEN = '<?= $module->getCSRFToken() ?>';
+
 const all_records = {}; // Stores all citation data grouped by user and year
 const selections = {}; // Stores user selections until the end so that they can be saved into the DB as one string with formatting for readability
 
 console.log('script loaded');
+
+console.log('API Url:' + api_url);
 
 function insertChoice(element_id, textarea_id) {
     const selected = selections[textarea_id];
@@ -32,8 +37,6 @@ function setValues() {
         document.getElementById(key).value = formatted;
     }
 }
-
-let got_idents = false;
 
 document.addEventListener('DOMContentLoaded', async function () {
     const linkblue_div = document.querySelector('div[data-mlm-type="label"]');
@@ -72,49 +75,12 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             return Object.values(flattened);
         };
-        
-        // Separate request to get the user data for the currently requested user
-        const fetchIdents = (key) => {
-            const idents_data = {
-                token: key,
-                content: 'record',
-                action: 'export',
-                format: 'json',
-                type: 'flat',
-                csvDelimiter: '',
-                fields: [
-                    'record_id',
-                    'identifier_userid',
-                    'identifier_first_name',
-                    'identifier_last_name',
-                ],
-                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
-                rawOrLabelHeaders: 'raw',
-                exportCheckboxLabel: 'false',
-                exportSurveyFields: 'false',
-                exportDataAccessGroups: 'false',
-                returnFormat: 'json',
-                filterLogic: `[identifier_userid]='${linkblue}'`
-            };
-
-            return new Promise((resolve, reject) => {
-                $.post(api_url, idents_data)
-                    .done(response => {
-                        resolve(response);
-                    })
-                    .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
-            });
-        };
 
         // Function to fetch records for a single API key
         const fetchRecords =  async (key) => {
-            if (!got_idents) {
-                const idents = await fetchIdents(key);
-                got_idents = true;
-            }
-
             const records_data = {
                 token: key,
+                redcap_csrf_token: ExternalModules.CSRF_TOKEN,
                 content: 'record',
                 action: 'export',
                 format: 'json',
@@ -173,44 +139,77 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             console.log('User Citations:', grouped_by_year); // Debug: ensure citations are filtered correctly
 
-            // Update the survey rows with user citations
+            // Generate the checkboxes
             document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {
-                let row_id = row.id;
-                row_id = row_id.split('-')[0];
-                const textarea = document.getElementById(row_id);
-                //textarea.classList.add('@HIDDEN');
-                //console.log(row_id);
-                let row_year = row_id.split('_').pop();
+                let row_id_base = row.id.split('-')[0];
+                const textarea = document.getElementById(row_id_base);
+                if (!textarea) return;
 
-                selections[row_id] = []; // we want each row_id as a key in the object
-                console.log(selections);
+                let row_year = row_id_base.split('_').pop();
+                selections[row_id_base] = [];
 
-                const dataCell = row.querySelector('td.data.col-5');
+                const dataCell = row.querySelector('td.data'); // Simplified selector for better compatibility
                 if (dataCell) {
-                    // Loop through available citations for the user
-                    Object.entries(user_citations).forEach(([year, citations]) => {
-                        if (year >= row_year) {
+                    // CHANGED: Corrected variable name from `user_citations` to `grouped_by_year`
+                    Object.entries(grouped_by_year).forEach(([year, citations]) => {
+                        if (parseInt(year) >= parseInt(row_year)) {
                             citations.forEach(citation => {
+                                // CHANGED: Use a unique ID like pmid and the full citation text for the label.
+                                const pmid = citation.citation_pmid || `record-${citation.record}-inst-${citation.redcap_repeat_instance}`;
+                                const fullCitation = citation.citation_full_citation;
+
                                 const customElement = document.createElement('div');
-                                // Update below to get an ID from somewhere that shows you the correct table.
-                                console.log(row_id);
+
+                                // Create a version of the citation text safe for the HTML attribute
+                                const hoverText = fullCitation.replace(/"/g, '&quot;');
                                 customElement.innerHTML = `
-                                <input id="${citation}" type="checkbox" onclick="insertChoice(this.id, '${row_id}')">
-                                <label class="mc" for="${citation}">${citation} (${year})</label>
-                            `;
+                                    <input id="${pmid}" type="checkbox" onclick="insertChoice(this.id, '${row_id_base}')" style="margin-right: 5px;">
+                                    <label class="mc" for="${pmid}" title="${hoverText}">
+                                        PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank">${pmid}</a> (${year})
+                                    </label>                                `;
                                 dataCell.appendChild(customElement);
                             });
                         }
                     });
                 }
-
-                const submit_row = document.querySelector('tr[class="surveysubmit"]');
-                const testButton = document.createElement('div');
-                //testButton.innerHTML = `<input  type="button" id="test_button" onclick="setValues()">Test</input>`
-                dataCell.appendChild(testButton);
             });
 
+            // Inject CSS once
+            (function addTooltipStyles() {
+                if (document.getElementById("custom-tooltip-style")) return; // don’t add twice
 
+                const style = document.createElement("style");
+                style.id = "custom-tooltip-style";
+                style.textContent = `
+                    .tooltip {
+                    position: relative;
+                    cursor: help;
+                    }
+
+                    .tooltip::after {
+                    content: attr(data-tooltip);
+                    position: absolute;
+                    bottom: 125%; /* show above */
+                    left: 50%;
+                    transform: translateX(-50%);
+                    white-space: normal; /* wrap long text */
+                    background: rgba(0, 0, 0, 0.85);
+                    color: #fff;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    font-size: 0.85em;
+                    min-width: 200px;
+                    max-width: 400px;
+                    display: none;
+                    z-index: 1000;
+                    }
+
+                    .tooltip:hover::after {
+                    display: block;
+                    }
+                `;
+                document.head.appendChild(style);
+            })();
 
             // Select the button using its attributes (e.g., `name` or `class`)
             const submitButton = document.querySelector('button[name="submit-btn-saverecord"]');
