@@ -1,8 +1,10 @@
 # FlightTracker-Publication-Validator
 
-1. Rename the folder to include a version number (for example: _v0.0.0) if it does not already have a version or it will not be recognized by REDCap.
+1. Rename the folder to include a version number (for example: _v1.0.0) if it does not already have a version or it will not be recognized by REDCap.
 
 # Configuration
+This external module expects that you have created a form which you wish to store a user's validation responses in. It requires some specific formatting to work. The survey should have paragraph fields with ID's containing "supported_pubs_<year>". This is used so that the program knows what fields need to be restyled, and also which flight tracker entries should be displayed. An instrument zip of the form used in my development is available in this repo.
+
 In the settings for the module there are the following requried fields:
 
 1. Validation Form: this tells the app which survey will be reformatted for the end-user. If you don't know the form's name you can check this by going into the `Record Status Dashboard` and selecting one of the records. The page parameter in the URL is the name for the form.
