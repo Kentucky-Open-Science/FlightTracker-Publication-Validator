@@ -39,97 +39,10 @@ function setValues() {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-    const userid_div = document.querySelector('div[data-mlm-type="label"]');
-    const userid = userid_div ? userid_div.textContent.trim() : null;
+    const linkblue_div = document.querySelector('div[data-mlm-type="label"]');
+    const linkblue = linkblue_div ? linkblue_div.textContent.trim() : null;
 
-    // Add loading overlay
-    const loadingOverlay = document.createElement("div");
-    loadingOverlay.id = "loading-overlay";
-    loadingOverlay.innerHTML = `
-        <div style="
-            position: fixed; 
-            top: 0; left: 0; right: 0; bottom: 0; 
-            background: rgba(255,255,255,0.8); 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 1.2em; 
-            z-index: 9999;">
-            <div class="spinner" style="
-                border: 6px solid #f3f3f3; 
-                border-top: 6px solid #3498db; 
-                border-radius: 50%; 
-                width: 40px; 
-                height: 40px; 
-                animation: spin 1s linear infinite;">
-            </div>
-            <span style="margin-left: 10px;">Loading citations...</span>
-        </div>
-    `;
-    document.body.appendChild(loadingOverlay);
-
-    // Inject spinner animation
-    const spinnerStyle = document.createElement("style");
-    spinnerStyle.textContent = `
-    @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-    }`;
-    document.head.appendChild(spinnerStyle);
-
-    (function addTooltipStyles() {
-        if (document.getElementById("custom-tooltip-style")) return;
-
-        const style = document.createElement("style");
-        style.id = "custom-tooltip-style";
-        style.textContent = `
-            .tooltip-wrapper {
-                position: relative;
-                display: inline-block;
-                margin-left: 6px;
-            }
-
-            .tooltip-icon {
-                display: inline-block;
-                color: #007bff;
-                font-weight: bold;
-                cursor: help;
-                border: 1px solid #007bff;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                line-height: 14px;
-                text-align: center;
-                font-size: 12px;
-                background: #f8f9fa;
-            }
-
-            .tooltip-text {
-                visibility: hidden;
-                opacity: 0;
-                transition: opacity 0.2s;
-                position: absolute;
-                top: 100%;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0, 0, 0, 0.85);
-                color: #fff;
-                padding: 6px 10px;
-                border-radius: 6px;
-                font-size: 0.85em;
-                min-width: 200px;
-                max-width: 400px;
-                white-space: normal;
-                z-index: 1000;
-            }
-
-            .tooltip-wrapper:hover .tooltip-text {
-                visibility: visible;
-                opacity: 1;
-            }
-        `;
-        document.head.appendChild(style);
-    })();
+    console.log('Linkblue:', linkblue); // Debug: ensure linkblue is captured correctly'
 
     let textAreas = document.getElementsByTagName('textarea');
     for(let i=0; i<textAreas.length; i++) {
@@ -138,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    // Flat return doesn't work with this data, so let's reconstruct it that way
+    // Flat return doesn't work with this data, so lets reconstruct it that way
         const flatten = (rows) => {
             const flattened = [];
 
@@ -163,39 +76,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             return Object.values(flattened);
         };
 
-        // Separate request to get the user data for the currently requested user
-        const fetchIdents = (key) => {
-            const idents_data = {
-                token: key,
-                content: 'record',
-                action: 'export',
-                format: 'json',
-                type: 'flat',
-                csvDelimiter: '',
-                fields: [
-                    'record_id',
-                    'identifier_userid',
-                    'identifier_first_name',
-                    'identifier_last_name',
-                ],
-                rawOrLabel: 'label', // we don't want numeric representations if we get multiple choice answers
-                rawOrLabelHeaders: 'raw',
-                exportCheckboxLabel: 'false',
-                exportSurveyFields: 'false',
-                exportDataAccessGroups: 'false',
-                returnFormat: 'json',
-                filterLogic: `[identifier_userid]='${linkblue}'`
-            };
-
-            return new Promise((resolve, reject) => {
-                $.post(api_url, idents_data)
-                    .done(response => {
-                        resolve(response);
-                    })
-                    .fail((jqXHR, textStatus, errorThrown) => reject(new Error(`Request failed: ${textStatus} ${errorThrown}`)));
-            });
-        };
-
         // Function to fetch records for a single API key
         const fetchRecords =  async (key) => {
             const records_data = {
@@ -217,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 exportSurveyFields: 'false',
                 exportDataAccessGroups: 'false',
                 returnFormat: 'json',
-                filterLogic: `[identifier_userid]='${userid}'`
+                filterLogic: `[identifier_userid]='${linkblue}'`
             };
 
             return new Promise((resolve, reject) => {
@@ -233,11 +113,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
         try {
             // Fetch data from all API keys
-            const allIdents = await Promise.all(api_keys.map(fetchIdents));
             const allResponses = await Promise.all(api_keys.map(fetchRecords));
 
             console.log('All Responses:', allResponses); // Debug: ensure data is fetched correctly
-            console.log('All Idents:', allIdents); // Debug: ensure data is fetched correctly
 
             // Process the fetched data
             const grouped_by_year = {};
@@ -261,45 +139,43 @@ document.addEventListener('DOMContentLoaded', async function () {
 
             console.log('User Citations:', grouped_by_year); // Debug: ensure citations are filtered correctly
 
-            // Generate the checkboxes
+            // Update the survey rows with user citations
             document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {
-                let row_id_base = row.id.split('-')[0];
-                const textarea = document.getElementById(row_id_base);
-                if (!textarea) return;
+                let row_id = row.id;
+                row_id = row_id.split('-')[0];
+                const textarea = document.getElementById(row_id);
+                //textarea.classList.add('@HIDDEN');
+                //console.log(row_id);
+                let row_year = row_id.split('_').pop();
 
-                let row_year = row_id_base.split('_').pop();
-                selections[row_id_base] = [];
+                selections[row_id] = []; // we want each row_id as a key in the object
+                console.log(selections);
 
-                const dataCell = row.querySelector('td.data'); // Simplified selector for better compatibility
+                const dataCell = row.querySelector('td.data.col-5');
                 if (dataCell) {
-                    // CHANGED: Corrected variable name from `user_citations` to `grouped_by_year`
-                    Object.entries(grouped_by_year).forEach(([year, citations]) => {
-                        if (parseInt(year) >= parseInt(row_year)) {
+                    // Loop through available citations for the user
+                    Object.entries(user_citations).forEach(([year, citations]) => {
+                        if (year >= row_year) {
                             citations.forEach(citation => {
-                                // CHANGED: Use a unique ID like pmid and the full citation text for the label.
-                                const pmid = citation.citation_pmid || `record-${citation.record}-inst-${citation.redcap_repeat_instance}`;
-                                const fullCitation = citation.citation_full_citation;
-
                                 const customElement = document.createElement('div');
-
-                                // Create a version of the citation text safe for the HTML attribute
-                                const hoverText = fullCitation.replace(/"/g, '&quot;');
+                                // Update below to get an ID from somewhere that shows you the correct table.
+                                console.log(row_id);
                                 customElement.innerHTML = `
-                                    <input id="${pmid}" 
-                                        type="checkbox" 
-                                        onclick="insertChoice(this.id, '${row_id_base}')" 
-                                        style="margin-right: 5px;">
-                                    <label class="mc" for="${pmid}">
-                                        PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank">${pmid}</a> (${year})
-                                        <p>${fullCitation}</p>
-                                    </label>
-                                `;
+                                <input id="${citation}" type="checkbox" onclick="insertChoice(this.id, '${row_id}')">
+                                <label class="mc" for="${citation}">${citation} (${year})</label>
+                            `;
                                 dataCell.appendChild(customElement);
                             });
                         }
                     });
                 }
+
+                const submit_row = document.querySelector('tr[class="surveysubmit"]');
+                const testButton = document.createElement('div');
+                //testButton.innerHTML = `<input  type="button" id="test_button" onclick="setValues()">Test</input>`
+                dataCell.appendChild(testButton);
             });
+
 
 
             // Select the button using its attributes (e.g., `name` or `class`)
@@ -314,10 +190,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 //submitButton.onclick = 'setValues();$(this).button("disable");dataEntrySubmit(this);return false;';
                 submitButton.setAttribute('onclick', newOnclick);
             }
-
-            // Remove loading overlay
-            const overlay = document.getElementById("loading-overlay");
-            if (overlay) overlay.remove();
 
         } catch (error) {
             console.error('Error fetching data:', error);

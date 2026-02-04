@@ -34,7 +34,6 @@ $api_url = $module->getRedcapApiUrl();
 
     document.getElementById('mabutton').addEventListener('click', async function () {
         const linkblue = document.getElementById('linkblueInput').value;
-
         console.log('Linkblue:', linkblue);
 
         let textAreas = document.getElementsByTagName('textarea');
