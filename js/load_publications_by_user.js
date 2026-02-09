@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 exportSurveyFields: 'false',
                 exportDataAccessGroups: 'false',
                 returnFormat: 'json',
-                filterLogic: `[identifier_userid]='${linkblue}'`
+                filterLogic: `[identifier_userid]='${userid}'`
             };
 
             return new Promise((resolve, reject) => {
