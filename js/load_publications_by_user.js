@@ -245,11 +245,15 @@ document.addEventListener('DOMContentLoaded', async function () {
                 response.forEach(object => {
                     const date = new Date(object.citation_date);
                     const citationYear = date.getFullYear().toString();
+                    const pmid = object.citation_pmid;
 
                     if (citationYear !== '') {
                         console.log('Citation Year:', citationYear); // Debug: check citation year extraction
                         if (grouped_by_year[citationYear]) {
-                            grouped_by_year[citationYear].push(object);
+                            if (!grouped_by_year[citationYear].includes(pmid)) {
+                                grouped_by_year[citationYear].push(object);
+                            }
+                            // else, don't add a duplicate value
                         }
                         else {
                             grouped_by_year[citationYear] = []
