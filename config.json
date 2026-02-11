@@ -28,6 +28,12 @@
             "type": "text"
         },
         {
+            "key": "api_url",
+            "name": "Input the URL for your REDCap API.",
+            "required": true,
+            "type": "text"
+        },
+        {
             "key": "api-key-desc",
             "name": "Please provide the API key(s) for cohorts of publications from Flight Tracker.",
             "required": true,

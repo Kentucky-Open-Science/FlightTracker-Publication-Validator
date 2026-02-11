@@ -1,5 +1,5 @@
 <?php
-namespace CAAIModules\PublicationValidator;
+namespace UKModules\PublicationValidator;
 
 use ExternalModules\AbstractExternalModule;
 use REDCap;
@@ -93,7 +93,6 @@ class PublicationValidator extends AbstractExternalModule {
             <script>
             // Modify survey submit to capture custom mapping data
             $(document).ready(function() {
-                //console.log(<?= json_encode($linkblue_request)?>)
                 // Intercept survey submit
                 $('form[name="form"]').on('submit', function(e) {
                     // Collect all publication mappings
