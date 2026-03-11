@@ -29,17 +29,23 @@
         },
         {
             "key": "api-key-desc",
-            "name": "Please provide the API key(s) for cohorts of publications from Flight Tracker.",
+            "name": "Please provide the API key for a cohort of publications from Flight Tracker. Press the '+' to add another.",
             "required": true,
             "type": "sub_settings",
-            "repeatable": false,
+            "repeatable": true,
             "sub_settings": [
                 {
+                    "key": "cohort-api-project-name",
+                    "name": "Cohort Name",
+                    "required": false,
+                    "type": "text"
+                },
+                {
                     "key": "cohort-api-key",
-                    "name": "Cohort API Key <div class='api_label'></div>",
+                    "name": "Cohort API Key",
                     "required": false,
                     "type": "text",
-                    "repeatable": true
+                    "repeatable": false
                 }
             ]
         }

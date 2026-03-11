@@ -183,10 +183,6 @@ class PublicationValidator extends AbstractExternalModule {
     function redcap_survey_page($project_id, $record, $instrument, $event_id, $group_id, $survey_hash, $response_id, $repeat_instance) {
         $selected_instrument = $this->getProjectSetting('validation_form');
         $apis = $this->getProjectSetting('cohort-api-key');
-        $apis = $apis[0]; // it returns a nested array with one element, this gets the element which has the keys
-        // $api_url = $this->getProjectSetting('api_url') !== ''
-        //     ? $this->getProjectSetting('api_url')
-        //     : $this->getRedcapApiUrl();
         $api_url = $this->getRedcapApiUrl();
 
         if ($instrument === $selected_instrument) {
@@ -196,6 +192,7 @@ class PublicationValidator extends AbstractExternalModule {
             ?>
                 <link rel="stylesheet" href="<?= $css_url ?>">
                 <script>
+                    console.log(<?= json_encode($apis) ?>);
                     const api_keys = <?= json_encode($apis) ?>;
                     console.log(api_keys)
                     const api_url = <?= json_encode($api_url) ?>;
