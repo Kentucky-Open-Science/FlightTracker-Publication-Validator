@@ -1,13 +1,13 @@
 {
     "name": "Flight Tracker Publication Validator",
     "description": "A tool which creates surveys linking service requests with possible publications impacted, and then allows for verification from a researcher.",
-    "namespace": "CAAIModules\\PublicationValidator",
+    "namespace": "UKModules\\PublicationValidator",
     "framework-version": 12,
     "authors": [
         {
             "name": "Noah Perry",
             "email": "noah.perry@uky.edu",
-            "institution": "University of Kentucky - CAAI"
+            "institution": "University of Kentucky - CCTS"
         }
     ],
     "links": {
@@ -24,12 +24,6 @@
         {
             "key": "validation_form",
             "name": "Input the Instrument name for the validation form.",
-            "required": true,
-            "type": "text"
-        },
-        {
-            "key": "api_url",
-            "name": "Input the URL for your REDCap API.",
             "required": true,
             "type": "text"
         },

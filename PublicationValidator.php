@@ -11,6 +11,7 @@ class PublicationValidator extends AbstractExternalModule {
     function getRedcapApiUrl() {
         // Construct the API URL dynamically
         $apiUrl = APP_PATH_WEBROOT_FULL . 'api/';
+
         return $apiUrl;
     }
 
@@ -191,7 +192,9 @@ class PublicationValidator extends AbstractExternalModule {
         if ($instrument === $selected_instrument) {
             // get the script from url since surveys page doesn't have direct access to modules
             $script_url = $this->getUrl('js/load_publications_by_user.js', true, true);
+            $css_url = $this->getUrl('css/survey.css', true, true);
             ?>
+                <link rel="stylesheet" href="<?= $css_url ?>">
                 <script>
                     const api_keys = <?= json_encode($apis) ?>;
                     console.log(api_keys)

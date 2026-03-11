@@ -77,60 +77,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     }`;
     document.head.appendChild(spinnerStyle);
 
-    (function addTooltipStyles() {
-        if (document.getElementById("custom-tooltip-style")) return;
-
-        const style = document.createElement("style");
-        style.id = "custom-tooltip-style";
-        style.textContent = `
-            .tooltip-wrapper {
-                position: relative;
-                display: inline-block;
-                margin-left: 6px;
-            }
-
-            .tooltip-icon {
-                display: inline-block;
-                color: #007bff;
-                font-weight: bold;
-                cursor: help;
-                border: 1px solid #007bff;
-                border-radius: 50%;
-                width: 16px;
-                height: 16px;
-                line-height: 14px;
-                text-align: center;
-                font-size: 12px;
-                background: #f8f9fa;
-            }
-
-            .tooltip-text {
-                visibility: hidden;
-                opacity: 0;
-                transition: opacity 0.2s;
-                position: absolute;
-                top: 100%;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0, 0, 0, 0.85);
-                color: #fff;
-                padding: 6px 10px;
-                border-radius: 6px;
-                font-size: 0.85em;
-                min-width: 200px;
-                max-width: 400px;
-                white-space: normal;
-                z-index: 1000;
-            }
-
-            .tooltip-wrapper:hover .tooltip-text {
-                visibility: visible;
-                opacity: 1;
-            }
-        `;
-        document.head.appendChild(style);
-    })();
-
     let textAreas = document.getElementsByTagName('textarea');
     for(let i=0; i<textAreas.length; i++) {
         if (textAreas[i].name.includes('supported_pubs')) {
@@ -247,17 +193,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const citationYear = date.getFullYear().toString();
                     const pmid = object.citation_pmid;
 
-                    if (citationYear !== '') {
-                        console.log('Citation Year:', citationYear); // Debug: check citation year extraction
-                        if (grouped_by_year[citationYear]) {
-                            if (!grouped_by_year[citationYear].includes(pmid)) {
-                                grouped_by_year[citationYear].push(object);
-                            }
-                            // else, don't add a duplicate value
+                    // Ensure we have a valid year and PMID
+                    if (citationYear !== 'NaN' && pmid) {
+                        if (!grouped_by_year[citationYear]) {
+                            grouped_by_year[citationYear] = [];
                         }
-                        else {
-                            grouped_by_year[citationYear] = []
+
+                        // CHECK: Does this PMID already exist in this year's array?
+                        const isDuplicate = grouped_by_year[citationYear].some(item => item.citation_pmid === pmid);
+
+                        if (!isDuplicate) {
                             grouped_by_year[citationYear].push(object);
+                        } else {
+                            console.log(`Skipped duplicate PMID: ${pmid} for year ${citationYear}`);
                         }
                     }
                 });
@@ -295,7 +243,10 @@ document.addEventListener('DOMContentLoaded', async function () {
                                         style="margin-right: 5px;">
                                     <label class="mc" for="${pmid}">
                                         PMID: <a href="https://pubmed.ncbi.nlm.nih.gov/${pmid}" target="_blank">${pmid}</a> (${year})
-                                        <p>${fullCitation}</p>
+                                        <p class="citation" data-full="${fullCitation}">
+                                            ${fullCitation.length > 400 ? fullCitation.slice(0, 400) + '...' : fullCitation}
+                                            ${fullCitation.length > 400 ? '<span class="toggle" style="z-index:9999;"> more</span>' : ''}
+                                        </p>
                                     </label>
                                 `;
                                 dataCell.appendChild(customElement);
@@ -326,4 +277,17 @@ document.addEventListener('DOMContentLoaded', async function () {
         } catch (error) {
             console.error('Error fetching data:', error);
         }
+});
+
+document.addEventListener("click", function(e) {
+    if (!e.target.classList.contains("toggle")) return;
+
+    const p = e.target.closest(".citation");
+    const full = p.dataset.full;
+
+    if (e.target.textContent.trim() === "more") {
+        p.innerHTML = `${full} <span class="toggle"> less</span>`;
+    } else {
+        p.innerHTML = `${full.slice(0,400)}... <span class="toggle"> more</span>`;
+    }
 });
