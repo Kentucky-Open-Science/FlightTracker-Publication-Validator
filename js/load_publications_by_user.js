@@ -4,10 +4,6 @@ ExternalModules.CSRF_TOKEN = '<?= $module->getCSRFToken() ?>';
 const all_records = {}; // Stores all citation data grouped by user and year
 const selections = {}; // Stores user selections until the end so that they can be saved into the DB as one string with formatting for readability
 
-console.log('script loaded');
-
-console.log('API Url:' + api_url);
-
 function insertChoice(element_id, textarea_id) {
     const selected = selections[textarea_id];
 
@@ -28,7 +24,6 @@ function insertChoice(element_id, textarea_id) {
     }
 
     selections[textarea_id] = selected;
-    //console.log(selections[textarea_id]);
 }
 
 function setValues() {
@@ -182,9 +177,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             const allIdents = await Promise.all(api_keys.map(fetchIdents));
             const allResponses = await Promise.all(api_keys.map(fetchRecords));
 
-            console.log('All Responses:', allResponses); // Debug: ensure data is fetched correctly
-            console.log('All Idents:', allIdents); // Debug: ensure data is fetched correctly
-
             // Process the fetched data
             const grouped_by_year = {};
             allResponses.forEach(response => {
@@ -205,13 +197,12 @@ document.addEventListener('DOMContentLoaded', async function () {
                         if (!isDuplicate) {
                             grouped_by_year[citationYear].push(object);
                         } else {
-                            console.log(`Skipped duplicate PMID: ${pmid} for year ${citationYear}`);
+                            // DEBUG
+                            // console.log(`Skipped duplicate PMID: ${pmid} for year ${citationYear}`);
                         }
                     }
                 });
             });
-
-            console.log('User Citations:', grouped_by_year); // Debug: ensure citations are filtered correctly
 
             // Generate the checkboxes
             document.querySelectorAll('tr[id^="supported_pubs_"]').forEach(row => {
@@ -224,19 +215,26 @@ document.addEventListener('DOMContentLoaded', async function () {
 
                 const dataCell = row.querySelector('td.data'); // Simplified selector for better compatibility
                 if (dataCell) {
-                    // CHANGED: Corrected variable name from `user_citations` to `grouped_by_year`
+                    const addedPmidsInThisRow = new Set(); // Track PMIDs for this specific row
+
+                    let i=0;
                     Object.entries(grouped_by_year).forEach(([year, citations]) => {
                         if (parseInt(year) >= parseInt(row_year)) {
                             citations.forEach(citation => {
-                                // CHANGED: Use a unique ID like pmid and the full citation text for the label.
-                                const pmid = citation.citation_pmid || `record-${citation.record}-inst-${citation.redcap_repeat_instance}`;
+                                const pmid = citation.citation_pmid;
                                 const fullCitation = citation.citation_full_citation;
+
+                                // Skip if we already added this PMID to this specific row
+                                if (addedPmidsInThisRow.has(pmid)) return;
+                                addedPmidsInThisRow.add(pmid);
 
                                 const customElement = document.createElement('div');
 
+                                if (i === 0) {
+                                    customElement.innerHTML += '<hr>'
+                                }
                                 // Create a version of the citation text safe for the HTML attribute
-                                const hoverText = fullCitation.replace(/"/g, '&quot;');
-                                customElement.innerHTML = `
+                                customElement.innerHTML += `
                                     <input id="${pmid}" 
                                         type="checkbox" 
                                         onclick="insertChoice(this.id, '${row_id_base}')" 
@@ -248,8 +246,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                                             ${fullCitation.length > 400 ? '<span class="toggle" style="z-index:9999;"> more</span>' : ''}
                                         </p>
                                     </label>
+                                    <hr>
                                 `;
                                 dataCell.appendChild(customElement);
+
+                                i++;
                             });
                         }
                     });
@@ -282,12 +283,16 @@ document.addEventListener('DOMContentLoaded', async function () {
 document.addEventListener("click", function(e) {
     if (!e.target.classList.contains("toggle")) return;
 
+    // STOP the click from bubbling up to the <label> and triggering the checkbox
+    e.preventDefault();
+    e.stopPropagation();
+
     const p = e.target.closest(".citation");
     const full = p.dataset.full;
 
     if (e.target.textContent.trim() === "more") {
-        p.innerHTML = `${full} <span class="toggle"> less</span>`;
+        p.innerHTML = `${full} <span class="toggle" style="z-index:9999;"> less</span>`;
     } else {
-        p.innerHTML = `${full.slice(0,400)}... <span class="toggle"> more</span>`;
+        p.innerHTML = `${full.slice(0,400)}... <span class="toggle" style="z-index:9999;"> more</span>`;
     }
 });
