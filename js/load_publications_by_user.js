@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 }
                                 // Create a version of the citation text safe for the HTML attribute
                                 customElement.innerHTML += `
-                                    <input id="${pmid}" 
+                                    <input id="${fullCitation}" 
                                         type="checkbox" 
                                         onclick="insertChoice(this.id, '${row_id_base}')" 
                                         style="margin-right: 5px;">

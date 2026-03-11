@@ -192,12 +192,8 @@ class PublicationValidator extends AbstractExternalModule {
             ?>
                 <link rel="stylesheet" href="<?= $css_url ?>">
                 <script>
-                    console.log(<?= json_encode($apis) ?>);
                     const api_keys = <?= json_encode($apis) ?>;
-                    console.log(api_keys)
                     const api_url = <?= json_encode($api_url) ?>;
-                    console.log(api_url);
-                    console.log(<?= json_encode($selected_instrument) ?>)
                     window.api_keys = <?= json_encode($apis) ?>;
                     window.api_url = <?= json_encode($api_url ?? '') ?>;
                     window.selected_instrument = <?= json_encode($selected_instrument) ?>;
