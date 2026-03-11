@@ -28,7 +28,7 @@ function insertChoice(element_id, textarea_id) {
 
 function setValues() {
     for (const [key, value] of Object.entries(selections)) {
-        let formatted = value.join(' | ');
+        let formatted = value.join('\t');
         document.getElementById(key).value = formatted;
     }
 }
