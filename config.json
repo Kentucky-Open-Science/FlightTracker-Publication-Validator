@@ -13,9 +13,9 @@
     "links": {
         "project": [
             {
-                "name": "User Pub Checker",
-                "icon": "fas fa-message",
-                "url": "pages/pub_checker.php",
+                "name": "Export Responses as CSV",
+                "icon": "fas fa-file-export",
+                "url": "pages/custom_export.php",
                 "show-header-and-footer": true
             }
         ]
@@ -51,7 +51,7 @@
         }
     ],
     "no-auth-pages": [
-        "pub_checker"
+        "custom_export"
     ],
     "include-authors-in-api-info": true,
     "api-actions": {

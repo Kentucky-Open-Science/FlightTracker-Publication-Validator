@@ -1,0 +1,158 @@
+.modal-comparison-grid table td,
+.modal-comparison-grid table th {
+    padding: 8px 12px;
+}
+
+/* Modal Overlay: Dark background behind the popup */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Modal Box: The main content container */
+.modal-box {
+    background-color: #ffffff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    height: 90%;
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Comparison Grid: Displays records side-by-side */
+.modal-comparison-grid {
+    display: flex;
+    gap: 2rem;
+    justify-content: space-between;
+}
+
+.modal-side {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: #f9f9f9;
+}
+
+.modal-record-header {
+    text-align: center;
+    font-weight: bold;
+    background: #f2f2f2;
+    padding: 6px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#tableContainer {
+    overflow-y: auto;
+    flex-grow: 1; /* fills remaining space */
+}
+
+#modalFooter {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    border-top: 1px solid #ccc;
+    text-align: center;       /* center content horizontally */
+    display: flex;
+    justify-content: center;  /* center buttons */
+    gap: 10px;                /* space between buttons */
+    border-radius: 0 0 8px 8px;
+}
+
+/* Base button styles */
+#modalFooter a {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    color: white;
+    text-decoration: none;
+}
+
+/* Close button (red) */
+.close-btn {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.close-btn:hover {
+    background-color: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Confirm button (green) */
+.confirm-btn {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.confirm-btn:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Optional link-style button container */
+.btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btns a {
+    text-decoration: none !important;
+}
+
+/* Position the button container in the top-left corner */
+.selection-btns {
+    display: flex;
+    justify-content: flex-start; /* left-align */
+
+}
+
+/* Shrink the button */
+.center-home-sects {
+    text-align: center;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 0;
+    color: #606060;
+    font-size: 14px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.1s linear, color 0.1s linear;
+}
+
+.center-home-sects:hover {
+    color: #fff;
+    background-color: #606060;
+}
+
+.center-home-sects span {
+    font-size: 16px; /* smaller icon */
+    color: #606060;
+    transition: color 0.1s linear;
+}
+.center-home-sects:hover span {
+    color: #fff;
+}

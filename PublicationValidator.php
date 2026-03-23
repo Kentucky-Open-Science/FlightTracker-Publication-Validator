@@ -23,6 +23,14 @@ class PublicationValidator extends AbstractExternalModule {
         return FALSE;
     }
 
+    private static function isExportPage() {
+        $page = isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : "";
+        if (preg_match("/DataExport/index.php", $_SERVER['REQUEST_URI'])) {
+            return TRUE;
+        }
+        return FALSE;
+    }
+
     function redcap_module_api($action, $payload, $project_id, $user_id, $format, $returnFormat, $csvDelim, $token) {
         if ($returnFormat != "json") {
             return $this->framework->apiErrorResponse("This API only supports JSON as return format!", 400);
@@ -30,6 +38,20 @@ class PublicationValidator extends AbstractExternalModule {
         switch ($action) {
             case "get-citations-by-userid": return $this->getCitationsByUserID($payload, $token);
         }
+    }
+
+    // Select users for whom the validation survey was completed
+    function getCompleted() {
+        $form = $this->getProjectSetting('validation_form') ?? 'pub_validation';
+        $fields = array('record_id', 'linkblue', 'name');
+        $fields = array_merge($fields, REDCap::getFieldNames($form));
+
+        $filter = '['.$form.'_complete]=2';
+        //$params = array('return_format'=>'json-array', 'fields'=>array('record_id', 'linkblue', 'name'), 'filterLogic'=>$filter);
+        $params = array('return_format'=>'json-array', 'fields'=>$fields, 'filterLogic'=>$filter);
+        //$params = array('return_format'=>'json-array', 'filterLogic'=>$filter);
+        $records = REDCap::getData($params);
+        return $records;
     }
 
     // Rewritten with Guzzle for a cleaner look
@@ -83,6 +105,15 @@ class PublicationValidator extends AbstractExternalModule {
                 'message' => $e->getMessage(),
                 'response' => $e->hasResponse() ? $e->getResponse()->getBody()->getContents() : null
             ];
+        }
+    }
+
+    function redcap_every_page_top($project_id) {
+        if (self::isExportPage()) {
+            $script_url = $this->getUrl('js/custom_export.js', true, true);
+            ?>
+            <script src="<?= $script_url ?>"></script>
+            <?php
         }
     }
 
