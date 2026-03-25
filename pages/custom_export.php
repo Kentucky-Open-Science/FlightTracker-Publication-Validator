@@ -35,10 +35,6 @@ $completed = $module->getCompleted();
     </thead>
 </table>
 
-<?php
-
-?>
-
 <script>
     let builtCSV = ''; // store globally for export
 

@@ -10,8 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Grab posted data (sanitize as needed)
-$record   = $_POST['record'] ?? null;
-$instrument = $_POST['instrument'] ?? null;
+$record   = $module->escape($_POST['record'] ?? null);
+$instrument = $module->escape($_POST['instrument'] ?? null);
 
 // Do something useful with REDCap
 if ($record) {
@@ -23,7 +23,8 @@ if ($record) {
     ]);
 
     // Flatten result
-    $row = array_shift($data[$record] ?? []);
+    $array = $data[$record] ?? [];
+    $row = array_shift($array);
 
     echo json_encode([
         'status'     => 'success',

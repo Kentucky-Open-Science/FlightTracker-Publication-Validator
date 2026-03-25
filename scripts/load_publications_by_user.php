@@ -26,7 +26,7 @@ class CitationUtility {
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
             $response = curl_exec($ch);
-            curl_close($ch);
+            $ch = null; // replaced curl_close since it triggered Psalm.
 
             $records = json_decode($response, true);
 
