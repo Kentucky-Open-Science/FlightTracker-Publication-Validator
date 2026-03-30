@@ -48,3 +48,12 @@
     visibility: visible;
     opacity: 1;
 }
+
+.pubs_container {
+    overflow-y: auto;
+    max-height: 50vh;
+    border: 1px solid lightgrey;
+    border-radius: 5pt;
+    padding: 10px;
+    background-color: #ffffff;
+}

@@ -33,7 +33,25 @@ function setValues() {
     }
 }
 
+document.addEventListener('onload', function() {
+
+});
+
 document.addEventListener('DOMContentLoaded', async function () {
+    let textAreas = document.getElementsByTagName('textarea');
+    for(let i=0; i<textAreas.length; i++) {
+        if (textAreas[i].name.includes('supported_pubs')) {
+            textAreas[i].classList.add("@HIDDEN");
+        }
+    }
+
+    let divs = document.getElementsByTagName('div');
+    for(let i=0; i<divs.length; i++) {
+        if (divs[i].id.includes('-expand')) {
+            divs[i].classList.add("@HIDDEN");
+        }
+    }
+    
     const userid_div = document.querySelector('div[data-mlm-type="label"]');
     const userid = userid_div ? userid_div.textContent.trim() : null;
 
@@ -71,13 +89,6 @@ document.addEventListener('DOMContentLoaded', async function () {
     100% { transform: rotate(360deg); }
     }`;
     document.head.appendChild(spinnerStyle);
-
-    let textAreas = document.getElementsByTagName('textarea');
-    for(let i=0; i<textAreas.length; i++) {
-        if (textAreas[i].name.includes('supported_pubs')) {
-            textAreas[i].classList.add("@HIDDEN");
-        }
-    }
 
     // Flat return doesn't work with this data, so let's reconstruct it that way
         const flatten = (rows) => {
@@ -214,10 +225,16 @@ document.addEventListener('DOMContentLoaded', async function () {
                 selections[row_id_base] = [];
 
                 const dataCell = row.querySelector('td.data'); // Simplified selector for better compatibility
+
                 if (dataCell) {
                     const addedPmidsInThisRow = new Set(); // Track PMIDs for this specific row
 
                     let i=0;
+
+                    const pubs_container = document.createElement('div');
+                    pubs_container.id = row_id_base;
+                    pubs_container.classList.add('pubs_container');
+
                     Object.entries(grouped_by_year).forEach(([year, citations]) => {
                         if (parseInt(year) >= parseInt(row_year)) {
                             citations.forEach(citation => {
@@ -229,10 +246,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 addedPmidsInThisRow.add(pmid);
 
                                 const customElement = document.createElement('div');
+                                customElement.id = `pub_${pmid}`
 
-                                if (i === 0) {
-                                    customElement.innerHTML += '<hr>'
-                                }
                                 // Create a version of the citation text safe for the HTML attribute
                                 customElement.innerHTML += `
                                     <input id="${fullCitation}" 
@@ -248,7 +263,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                                     </label>
                                     <hr>
                                 `;
-                                dataCell.appendChild(customElement);
+                                pubs_container.appendChild(customElement)
+                                dataCell.appendChild(pubs_container);
 
                                 i++;
                             });

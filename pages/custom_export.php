@@ -25,15 +25,17 @@ $completed = $module->getCompleted();
     </div>
 </div>
 
-<table id="user_table" class="dataTable cell-border no-footer">
-    <thead>
-        <tr>
-            <th>Record ID</th>
-            <th>LinkBlue</th>
-            <th>Name</th>
-        </tr>
-    </thead>
-</table>
+<div style="overflow-y: auto; max-height: 80vh;">
+    <table id="user_table" class="dataTable cell-border no-footer">
+        <thead>
+            <tr>
+                <th>Record ID</th>
+                <th>LinkBlue</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+    </table>
+</div>
 
 <script>
     let builtCSV = ''; // store globally for export
@@ -64,13 +66,6 @@ $completed = $module->getCompleted();
 
         completed.forEach(record => {
             Object.keys(record).forEach(key => {
-                /*if ((key.startsWith('services_req_') && record[key])) {
-                    const service_year = key.split('_').pop();
-                    if (service_year.startsWith('year')) {
-
-                    }
-                }*/
-
                 if (key.startsWith('supported_pubs_') && record[key]) {
                     const year = key.split('_').pop();
 
