@@ -57,11 +57,20 @@ $completed = $module->getCompleted();
     function preview() {
         const completed = <?= json_encode($completed); ?>;
 
+        console.log(completed);
+
         const rows = [];
-        rows.push(['record_id', 'linkblue', 'name', 'year', 'publication']);
+        rows.push(['record_id', 'linkblue', 'name', 'year', 'services', 'publication']);
 
         completed.forEach(record => {
             Object.keys(record).forEach(key => {
+                /*if ((key.startsWith('services_req_') && record[key])) {
+                    const service_year = key.split('_').pop();
+                    if (service_year.startsWith('year')) {
+
+                    }
+                }*/
+
                 if (key.startsWith('supported_pubs_') && record[key]) {
                     const year = key.split('_').pop();
 
@@ -70,12 +79,15 @@ $completed = $module->getCompleted();
                         .map(p => p.trim())
                         .filter(p => p.length > 0);
 
+                    const services = record[`services_req_${year}`] ?? '';
+
                     pubs.forEach(pub => {
                         rows.push([
                             record.record_id,
                             record.linkblue,
                             record.name,
                             year,
+                            services,
                             pub
                         ]);
                     });

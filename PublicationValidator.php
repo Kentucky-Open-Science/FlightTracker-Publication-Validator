@@ -35,14 +35,40 @@ class PublicationValidator extends AbstractExternalModule {
     // Select users for whom the validation survey was completed
     function getCompleted() {
         $form = $this->getProjectSetting('validation_form') ?? 'pub_validation';
+        $forms = array($form, 'services');
         $fields = array('record_id', 'linkblue', 'name');
-        $fields = array_merge($fields, REDCap::getFieldNames($form));
+        $fields = array_merge($fields, REDCap::getFieldNames($forms[0]), REDCap::getFieldNames($forms[1]));
 
         $filter = '['.$form.'_complete]=2';
-        //$params = array('return_format'=>'json-array', 'fields'=>array('record_id', 'linkblue', 'name'), 'filterLogic'=>$filter);
         $params = array('return_format'=>'json-array', 'fields'=>$fields, 'filterLogic'=>$filter);
-        //$params = array('return_format'=>'json-array', 'filterLogic'=>$filter);
         $records = REDCap::getData($params);
+
+        // Loop through each record to remap the keys
+        foreach ($records as &$record) {
+            // We look for keys matching 'year' followed by a digit (e.g., year1, year2)
+            foreach ($record as $key => $value) {
+                if (preg_match('/^year(\d+)$/', $key, $matches)) {
+                    $yearNumber = $matches[1]; // The '1' in 'year1'
+                    $actualYearValue = trim($value);
+
+                    // Check if the value is actually a 4-digit year (the morphology check)
+                    if (!empty($actualYearValue) && preg_match('/^\d{4}$/', $actualYearValue)) {
+                        $targetKey = "services_req_year" . $yearNumber;
+
+                        // If the corresponding services_req key exists, rename it
+                        if (isset($record[$targetKey])) {
+                            $newKeyName = "services_req_" . $actualYearValue;
+                            $record[$newKeyName] = $record[$targetKey];
+
+                            // Clean up the old generic key
+                            unset($record[$targetKey]);
+                        }
+                    }
+                }
+            }
+        }
+        unset($record); // Break reference
+
         return $records;
     }
 
