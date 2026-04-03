@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             divs[i].classList.add("@HIDDEN");
         }
     }
-    
+
     const userid_div = document.querySelector('div[data-mlm-type="label"]');
     const userid = userid_div ? userid_div.textContent.trim() : null;
 
