@@ -2,7 +2,7 @@
     "name": "Flight Tracker Publication Validator",
     "description": "A tool which creates surveys linking service requests with possible publications impacted, and then allows for verification from a researcher.",
     "namespace": "UKModules\\PublicationValidator",
-    "framework-version": 12,
+    "framework-version": 16,
     "authors": [
         {
             "name": "Noah Perry",
